@@ -1,0 +1,8 @@
+# Copy to mise.local.toml (git-ignored) and point at your own installs.
+[env]
+# Ghidra 12.1+ (the directory containing ghidraRun and Ghidra/)
+GHIDRA_INSTALL_DIR = "/path/to/ghidra_12.1.4_PUBLIC"
+# JDK 21+ home (on macOS: /usr/libexec/java_home -v 21)
+JAVA_HOME = "/path/to/jdk-21"
+# The folder you unpacked the workshop files into, outside this repo (absolute path)
+GHIDRA_WORKSHOP_DIR = "/path/to/ghidra-workshop"

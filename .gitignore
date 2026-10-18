@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+ghidra_projects/
+mise.local.toml
+# Workshop binaries and Ghidra projects belong in ~/ghidra-workshop, outside this repo.
+binaries/
+*.gpr
+*.rep/

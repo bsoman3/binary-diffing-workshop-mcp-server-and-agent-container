@@ -1,0 +1,36 @@
+{
+  "name": "ghidra-mcp-workshop",
+  "build": { "dockerfile": "Dockerfile" },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "mounts": [
+    // The container's own venv: Linux packages, kept apart from the host's .venv.
+    "source=ghidra-workshop-venv-${devcontainerId},target=/workspace/.venv,type=volume",
+    // Read-only git metadata: the agent can't add hooks or config that would run when the
+    // student uses git on the host. The student commits on the host.
+    "source=${localWorkspaceFolder}/.git,target=/workspace/.git,type=bind,readonly",
+    // Hide the server's default project folder, which would hold analyzed binaries.
+    "type=tmpfs,target=/workspace/ghidra_projects",
+    // Agent logins and settings survive rebuilds.
+    "source=ghidra-workshop-claude-${devcontainerId},target=/home/vscode/.claude,type=volume",
+    "source=ghidra-workshop-codex-${devcontainerId},target=/home/vscode/.codex,type=volume",
+    "source=ghidra-workshop-copilot-${devcontainerId},target=/home/vscode/.copilot,type=volume"
+  ],
+  "runArgs": [
+    "--init",
+    // Docker Desktop provides host.docker.internal; on Linux this adds it.
+    "--add-host=host.docker.internal:host-gateway",
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges"
+  ],
+  // Keep the Dockerfile's CMD, the socat relay to the server.
+  "overrideCommand": false,
+  "remoteUser": "vscode",
+  // Plain python and pytest use the container's venv too, not only mise run.
+  "remoteEnv": {
+    "VIRTUAL_ENV": "/workspace/.venv",
+    "PATH": "/workspace/.venv/bin:${containerEnv:PATH}"
+  },
+  "updateRemoteUserUID": true,
+  "postCreateCommand": ".devcontainer/post-create.sh"
+}

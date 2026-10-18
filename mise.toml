@@ -1,0 +1,63 @@
+# Project-only toolchain for ghidra-mcp-lite. Ghidra and the JDK are not mise tools:
+# point at your own installs in mise.local.toml (copy mise.local.toml.example).
+
+[tools]
+# pyghidra pins JPype 1.5.2, which ships prebuilt wheels up to Python 3.13.
+python = "3.13"
+
+[env]
+# uv (used when installed) leaves pip out of new venvs unless asked to seed it.
+_.python.venv = { path = ".venv", create = true, uv_create_args = ["--seed"] }
+GHIDRA_INSTALL_DIR = { required = "Set GHIDRA_INSTALL_DIR in mise.local.toml to your Ghidra 12.1+ install (the directory containing ghidraRun)." }
+JAVA_HOME = { required = "Set JAVA_HOME in mise.local.toml to a JDK 21+ home." }
+GHIDRA_WORKSHOP_DIR = { required = "Set GHIDRA_WORKSHOP_DIR in mise.local.toml to the absolute path of the folder you unpacked the workshop files into, outside this repo (such as /Users/you/ghidra-workshop)." }
+
+[tasks.install]
+description = "Install ghidra-mcp-lite into the project venv (with ghidrecomp and test extras)"
+run = 'python -m pip install -e ".[ghidrecomp,dev]"'
+
+[tasks.test]
+description = "Run the unit tests (not the exercise checks)"
+run = 'pytest -m "not integration and not exercise"'
+
+[tasks."test:integration"]
+description = "Run the integration tests against your Ghidra (needs a C compiler)"
+run = "pytest -m integration"
+
+[tasks."test:gui"]
+description = "Run the GUI smoke suite (opens a Ghidra window; needs a display)"
+env = { GHIDRA_MCP_GUI_TESTS = "1" }
+run = "pytest -m gui"
+
+[tasks.check]
+description = "Run every exercise's acceptance tests"
+run = "pytest tests/exercises"
+
+[tasks."check:read-bytes"]
+description = "Exercise 2: run the read_bytes acceptance tests"
+run = "pytest tests/exercises/test_read_bytes.py"
+
+[tasks.serve]
+description = "Run the server headless; arguments are passed to ghidra-mcp"
+# raw: mise delivers Ctrl+C once and does not kill the server while it closes the project.
+raw = true
+run = "ghidra-mcp"
+
+[tasks.gui]
+description = "Run the server in GUI mode; arguments are passed to ghidra-mcp"
+raw = true
+run = "ghidra-mcp --gui"
+
+[tasks."workshop:analyze"]
+description = "Analyze the workshop binaries in $GHIDRA_WORKSHOP_DIR/binaries into $GHIDRA_WORKSHOP_DIR/workshop.gpr"
+run = 'ghidra-mcp --analyze-only --project-path "$GHIDRA_WORKSHOP_DIR" --project-name workshop "$GHIDRA_WORKSHOP_DIR/binaries"'
+
+[tasks."workshop:serve"]
+description = "Serve the workshop project over HTTP at http://127.0.0.1:8000/mcp, importing any workshop binary not yet in it"
+raw = true
+run = 'ghidra-mcp --project-path "$GHIDRA_WORKSHOP_DIR/workshop.gpr" --transport streamable-http "$GHIDRA_WORKSHOP_DIR/binaries"'
+
+[tasks."workshop:gui"]
+description = "Serve the workshop project with the Ghidra GUI at http://127.0.0.1:8000/mcp, importing any workshop binary not yet in it"
+raw = true
+run = 'ghidra-mcp --gui --project-path "$GHIDRA_WORKSHOP_DIR/workshop.gpr" "$GHIDRA_WORKSHOP_DIR/binaries"'

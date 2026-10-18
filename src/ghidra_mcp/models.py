@@ -1,0 +1,138 @@
+from pydantic import BaseModel, Field
+
+
+class ItemFailure(BaseModel):
+    address: str = Field(..., description="Address of the item that could not be read.")
+    error: str = Field(..., description="Why it could not be read.")
+
+
+class DecompiledFunction(BaseModel):
+    name: str = Field(..., description="The function's qualified name and entry point.")
+    code: str = Field(..., description="Pseudo-C decompilation output.")
+    signature: str | None = Field(None, description="Function signature.")
+    resolution: str | None = Field(
+        None,
+        description="Set only when the target was resolved from a loose match (a partial name, "
+        "or an address inside a function): states what the input resolved to and how.",
+    )
+
+
+class FunctionInfo(BaseModel):
+    name: str = Field(..., description="Fully-qualified function name.")
+    address: str = Field(..., description="Entry point address.")
+    signature: str | None = Field(None, description="Function signature.")
+    external: bool = Field(False, description="Whether this is an external/thunk function.")
+
+
+class CurrentAddress(BaseModel):
+    binary_name: str = Field(..., description="Binary open in CodeBrowser's current program.")
+    address: str = Field(..., description="Address of CodeBrowser's cursor.")
+    function_name: str | None = Field(None, description="Qualified name of the function containing the cursor, if any.")
+
+
+class CurrentFunction(BaseModel):
+    binary_name: str = Field(..., description="Binary open in CodeBrowser's current program.")
+    function: "FunctionInfo" = Field(..., description="The function containing CodeBrowser's cursor.")
+
+
+class FunctionList(BaseModel):
+    functions: list[FunctionInfo] = Field(..., description="List of functions.")
+    total: int = Field(..., description="Total matching functions (before pagination).")
+
+
+class ProgramInfo(BaseModel):
+    name: str = Field(..., description="Program name in the Ghidra project.")
+    file_path: str | None = Field(None, description="Path to the binary on disk.")
+    load_time: float | None = Field(None, description="Unix timestamp when the program was loaded.")
+    analysis_complete: bool = Field(..., description="True if Ghidra analysis has finished.")
+    status: str = Field(
+        ..., description="importing, analyzing (queued or running), ready, or failed."
+    )
+    failure: str | None = Field(None, description="Why import or analysis failed (status failed).")
+    warnings: list[str] = Field(
+        default_factory=list, description="Configuration warnings recorded during analysis."
+    )
+    metadata: dict = Field(..., description="Program metadata from Ghidra.")
+
+
+class ProgramInfos(BaseModel):
+    programs: list[ProgramInfo] = Field(..., description="All programs in the project.")
+
+
+class CrossReferenceInfo(BaseModel):
+    function_name: str | None = Field(
+        None,
+        description="The function containing the reference's source address.",
+    )
+    from_address: str = Field(..., description="Address the reference originates from.")
+    to_address: str = Field(..., description="Address being referenced.")
+    type: str = Field(..., description="Reference type (e.g. UNCONDITIONAL_CALL).")
+
+
+class CrossReferenceInfos(BaseModel):
+    cross_references: list[CrossReferenceInfo]
+    resolution: str | None = Field(
+        None,
+        description="Set only when the target was resolved from a loose match (a partial name, "
+        "or an address inside a function): states what the input resolved to and how.",
+    )
+
+
+class StringInfo(BaseModel):
+    value: str = Field(..., description="String value.")
+    address: str = Field(..., description="Address of the string in the binary.")
+
+
+class StringSearchResults(BaseModel):
+    strings: list[StringInfo] = Field(..., description="Matching strings (up to limit).")
+    total: int = Field(..., description="Total matches found (may exceed returned count).")
+    partial: bool = Field(False, description="True if some strings could not be read (see failures).")
+    failures: list[ItemFailure] = Field(default_factory=list, description="Strings that could not be read.")
+
+
+class BytesReadResult(BaseModel):
+    address: str = Field(..., description="Normalized address bytes were read from.")
+    size: int = Field(..., description="Number of bytes actually read.")
+    data: str = Field(..., description="Raw bytes as a hex string.")
+    requested_size: int = Field(..., description="Number of bytes requested.")
+    partial: bool = Field(
+        False, description="True if fewer bytes were read than requested (the range ran past memory)."
+    )
+
+
+class MemorySegment(BaseModel):
+    name: str = Field(..., description="Segment name (e.g. '.text', '.data').")
+    start: str = Field(..., description="Start address.")
+    end: str = Field(..., description="End address (inclusive).")
+    size: int = Field(..., description="Size in bytes.")
+    permissions: str = Field(..., description="Permission flags: r/w/x combination.")
+    type: str = Field(..., description="Block type (DEFAULT, BIT_MAPPED, BYTE_MAPPED, etc.).")
+    initialized: bool = Field(..., description="Whether the segment has initialized data.")
+
+
+class MemorySegments(BaseModel):
+    segments: list[MemorySegment]
+
+
+class DisassemblyLine(BaseModel):
+    address: str = Field(..., description="Instruction address.")
+    bytes: str = Field(..., description="Raw instruction bytes as hex string.")
+    mnemonic: str = Field(..., description="Instruction mnemonic (e.g. MOV, CALL, JMP).")
+    operands: str = Field(..., description="Operand string.")
+    comment: str | None = Field(None, description="EOL comment if set.")
+    errors: list[str] = Field(
+        default_factory=list,
+        description="Fields of this instruction that could not be read (bytes, operands, comment).",
+    )
+
+
+class DisassemblyResult(BaseModel):
+    function_name: str = Field(..., description="Function name.")
+    address: str = Field(..., description="Function entry point address.")
+    instructions: list[DisassemblyLine] = Field(..., description="All instructions in the function body.")
+    partial: bool = Field(False, description="True if some instruction fields could not be read.")
+    resolution: str | None = Field(
+        None,
+        description="Set only when the target was resolved from a loose match (a partial name, "
+        "or an address inside a function): states what the input resolved to and how.",
+    )
